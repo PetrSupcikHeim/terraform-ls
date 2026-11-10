@@ -195,6 +195,35 @@ func TestHandle_FullURI(t *testing.T) {
 	}
 }
 
+func TestHandle_FullURI_escapedFilename(t *testing.T) {
+	testCases := []struct {
+		filename string
+		escaped  string
+	}{
+		{filename: "dev#local.tfvars", escaped: "dev%23local.tfvars"},
+		{filename: "main#local.tf", escaped: "main%23local.tf"},
+		{filename: "dev local.tfvars", escaped: "dev%20local.tfvars"},
+		{filename: "dev%23local.tfvars", escaped: "dev%2523local.tfvars"},
+		{filename: "dev+local.tfvars", escaped: "dev+local.tfvars"},
+		{filename: "dev?local.tfvars", escaped: "dev%3Flocal.tfvars"},
+		{filename: "café.tfvars", escaped: "caf%C3%A9.tfvars"},
+	}
+	for _, dirURI := range []string{"file:///random/project%23one", "file:///C:/project%23one"} {
+		for _, tc := range testCases {
+			t.Run(dirURI+"/"+tc.escaped, func(t *testing.T) {
+				h := Handle{Dir: DirHandleFromURI(dirURI), Filename: tc.filename}
+				expected := dirURI + "/" + tc.escaped
+				if actual := h.FullURI(); actual != expected {
+					t.Fatalf("expected URI %q, got %q", expected, actual)
+				}
+				if actual := HandleFromURI(h.FullURI()); actual != h {
+					t.Fatalf("URI round trip changed handle: %#v != %#v", actual, h)
+				}
+			})
+		}
+	}
+}
+
 func TestHandle_FullPath(t *testing.T) {
 	type testCase struct {
 		Handle       Handle

@@ -5,6 +5,7 @@ package document
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -57,5 +58,6 @@ func (h Handle) FullPath() string {
 }
 
 func (h Handle) FullURI() string {
-	return h.Dir.URI + "/" + h.Filename
+	filename := &url.URL{Path: h.Filename}
+	return h.Dir.URI + "/" + filename.EscapedPath()
 }
