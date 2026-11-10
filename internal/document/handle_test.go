@@ -5,9 +5,45 @@ package document
 
 import (
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"testing"
 )
+
+func TestHandleFromURI_escapedFilename(t *testing.T) {
+	testCases := []struct {
+		filename string
+		escaped  string
+	}{
+		{filename: "dev#local.tfvars", escaped: "dev%23local.tfvars"},
+		{filename: "main#local.tf", escaped: "main%23local.tf"},
+		{filename: "dev local.tfvars", escaped: "dev%20local.tfvars"},
+		{filename: "dev%23local.tfvars", escaped: "dev%2523local.tfvars"},
+		{filename: "dev+local.tfvars", escaped: "dev%2Blocal.tfvars"},
+		{filename: "café.tfvars", escaped: "caf%C3%A9.tfvars"},
+	}
+	for _, dirURI := range []string{"file:///random/project%23one", "file:///C%3A/project%23one"} {
+		for _, tc := range testCases {
+			t.Run(dirURI+"/"+tc.escaped, func(t *testing.T) {
+				h := HandleFromURI(dirURI + "/" + tc.escaped)
+				if h.Filename != tc.filename {
+					t.Fatalf("expected filename %q, got %q", tc.filename, h.Filename)
+				}
+				expected := Handle{Dir: DirHandleFromURI(dirURI), Filename: tc.filename}
+				if h != expected {
+					t.Fatalf("expected handle %#v, got %#v", expected, h)
+				}
+				expectedPath := filepath.Join(expected.Dir.Path(), tc.filename)
+				if h.FullPath() != expectedPath {
+					t.Fatalf("expected path %q, got %q", expectedPath, h.FullPath())
+				}
+				if fromPath := HandleFromPath(expectedPath); fromPath != h {
+					t.Fatalf("path and URI handles differ: %#v != %#v", fromPath, h)
+				}
+			})
+		}
+	}
+}
 
 func TestHandleFromURI(t *testing.T) {
 	testCases := []struct {

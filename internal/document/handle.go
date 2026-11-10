@@ -9,6 +9,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/hashicorp/terraform-ls/internal/uri"
 )
 
 // Handle represents a document location
@@ -31,7 +33,7 @@ func HandleFromURI(docUri string) Handle {
 
 	return Handle{
 		Dir:      DirHandleFromURI(dirUri),
-		Filename: filename,
+		Filename: filepath.Base(uri.MustPathFromURI(docUri)),
 	}
 }
 

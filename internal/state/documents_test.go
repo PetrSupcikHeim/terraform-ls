@@ -4,13 +4,39 @@
 package state
 
 import (
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-ls/internal/document"
 	"github.com/hashicorp/terraform-ls/internal/source"
+	"github.com/hashicorp/terraform-ls/internal/uri"
 )
+
+func TestDocumentStore_GetDocument_escapedFilename(t *testing.T) {
+	dir := t.TempDir()
+	for _, filename := range []string{"dev#local.tfvars", "main#local.tf", "dev local.tfvars", "dev%23local.tfvars"} {
+		t.Run(filename, func(t *testing.T) {
+			s, err := NewStateStore()
+			if err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(dir, filename)
+			h := document.HandleFromURI(uri.FromPath(path))
+			if err := s.DocumentStore.OpenDocument(h, "terraform", 1, []byte("unsaved content")); err != nil {
+				t.Fatal(err)
+			}
+			doc, err := s.DocumentStore.GetDocument(document.HandleFromPath(path))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(doc.Text) != "unsaved content" {
+				t.Fatalf("expected unsaved document content, got %q", doc.Text)
+			}
+		})
+	}
+}
 
 func TestDocumentStore_UpdateDocument_notFound(t *testing.T) {
 	s, err := NewStateStore()
